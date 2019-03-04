@@ -102,7 +102,7 @@ model.compile(loss='mean_squared_error',#'mean_squared_error' iou_loss.iou_loss
 
 history = model.fit(images_new, labels,
         batch_size=64,#orig 128
-        epochs=100,#50
+        epochs=500,#50
         verbose=1,
         validation_split = 0.2)
 score = model.evaluate(images_new, labels, verbose=0)
