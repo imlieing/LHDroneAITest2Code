@@ -26,7 +26,8 @@ def sh(x):
 scale = 1/2
 resize_1 = int(864*scale)
 resize_2 = int(1296*scale)
-batch_size = 8
+batch_size = 64
+epochs=30
 dir = "Data_Training_2/"
 f =  open("training_GT_labels_v2.json","r")
 parsed_json = json.loads(f.read())
@@ -72,12 +73,12 @@ def generate_data(batch_size):
 leak = 0.3
 model = Sequential()
 
-model.add(Conv2D(16, kernel_size=(3,3), #orig 32 filters
+model.add(Conv2D(4, kernel_size=(3,3), #orig 32 filters
 	#activation=act,
 	input_shape=(resize_1,resize_2,1),
 	))
 model.add(LeakyReLU(alpha=leak))
-model.add(Conv2D(32, kernel_size=(3,3) #orig 32 filters
+model.add(Conv2D(8, kernel_size=(3,3) #orig 32 filters
 	#activation=act,
 	))
 model.add(LeakyReLU(alpha=leak))
@@ -105,7 +106,7 @@ history = model.fit_generator(
 	steps_per_epoch = int(len(os.listdir("Data_Training_2/")) * 0.8 // batch_size),
 	#validation_data = generate_validation("Data_Training_2/", batch_size),
 	#validation_steps = int(len(os.listdir("Data_Training_2/")) * 0.2 // batch_size),
-	epochs=500,#50
+	epochs=epochs,
 	verbose=1
 	)
 
@@ -143,4 +144,3 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
-

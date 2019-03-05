@@ -21,7 +21,7 @@ def sh(x):
 # sh(cv2.dilate(cv2.cornerHarris(cv2.blur(gray,(3,3)),2,3,0.04),None))
 
 
-images_base, labels_base = load_data.load_small_clean(1000)
+images_base, labels_base = load_data.load_small_clean(600)
 scale = 1/2
 resize_1 = int(864*scale)
 resize_2 = int(1296*scale)
@@ -52,7 +52,7 @@ for i in range(len(images_base)):
 	#asd2_copy_blurred=sh(cv2.blur(asd2_copy,(3,3)))
 	#asd3=sh(cv2.Canny(asd2_copy,5,10))
 	images[i] = asd2_copy
-	#sh(images[i])
+	sh(images[i])
 	for i1 in range(4):
 		labels[i,2*i1] /= 1296
 		labels[i,2*i1+1] /= 864
