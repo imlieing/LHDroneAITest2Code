@@ -10,6 +10,8 @@ import cv2
 import json
 import matplotlib.pyplot as plt
 import datetime
+import os
+import random
 
 import load_data
 
@@ -21,67 +23,63 @@ def sh(x):
 # sh(cv2.dilate(cv2.cornerHarris(cv2.blur(gray,(3,3)),2,3,0.04),None))
 
 
-images_base, labels_base = load_data.load_small_clean(600)
 scale = 1/2
 resize_1 = int(864*scale)
 resize_2 = int(1296*scale)
-images = np.zeros((len(images_base),resize_1,resize_2))
-labels = labels_base
-for i in range(len(images_base)):
-	mod = images_base[i,:,:,:]
-	asd=cv2.dilate(
-			cv2.cornerHarris(
-				cv2.blur(
-					cv2.cvtColor(
-						cv2.resize(
-							mod, dsize=(resize_2,resize_1), interpolation=cv2.INTER_CUBIC
-						), cv2.COLOR_BGR2GRAY
-					),(3,3)
-				),2,3,0.04
-			),None
-			)
+batch_size = 8
+dir = "Data_Training_2/"
+f =  open("training_GT_labels_v2.json","r")
+parsed_json = json.loads(f.read())
 
-	kernel = np.ones((70,70),np.float32)/1
-	asd2=cv2.filter2D(asd,-1,kernel)
+def load_multi_image(lst):
+	X = np.zeros((len(lst),resize_1,resize_2,1))
+	for i in range(len(lst)):
+		X[i] = cv2.imread(dir + lst[i])[:,:,0:1] # it is supposed to be 1 channel but its 3 with all the same values...
+	return X
 
-	asd2_copy = asd2*256
-	asd2_copy[asd2_copy < 0] = 0
-	#sh(asd2_copy)
-	asd2_copy = np.uint8(asd2_copy)
-	#sh(asd2_copy)
-	#asd2_copy_blurred=sh(cv2.blur(asd2_copy,(3,3)))
-	#asd3=sh(cv2.Canny(asd2_copy,5,10))
-	images[i] = asd2_copy
-	images[i] += cv2.resize(
-							images_base[i,:,:,1]*0.12,
-							dsize=(resize_2,resize_1),
-							interpolation=cv2.INTER_CUBIC
-						)
-	#sh(images[i])
-	for i1 in range(4):
-		labels[i,2*i1] /= 1296
-		labels[i,2*i1+1] /= 864
+def load_multi_label(lst):
+	Y = np.zeros((len(lst),8))
+	for i in range(len(lst)):
+		Y[i] = parsed_json[lst[i]][0]
+	return Y
 
-images_new = np.zeros((images.shape[0],images.shape[1],images.shape[2],1))
-images_new[:,:,:,0]=images
-print(images_new.shape)
+
+def generate_data(batch_size):
+	lst = os.listdir(dir)
+	L = int(len(lst)*0.8)
+	while True:
+		i = 0
+		batch_start = 0
+		batch_end = batch_size
+		b = 0
+		while batch_start < L:
+			limit = min(batch_end, L)
+			X = load_multi_image(lst[batch_start:limit])
+			Y = load_multi_label(lst[batch_start:limit])
+			
+			yield (X,Y) #a tuple with two numpy arrays with batch_size samples
+
+			batch_start += batch_size
+			batch_end += batch_size
+
+
 ################################################################################################
+###############################################################################################
+#################################################################################################
 ################################################################################################
-################################################################################################
-################################################################################################
+
 
 leak = 0.3
 model = Sequential()
 
 model.add(Conv2D(16, kernel_size=(3,3), #orig 32 filters
-    #activation=act,
-    input_shape=(images_new.shape[1:]),
-    ))
+	#activation=act,
+	input_shape=(resize_1,resize_2,1),
+	))
 model.add(LeakyReLU(alpha=leak))
-model.add(Conv2D(32, kernel_size=(3,3), #orig 32 filters
-    #activation=act,
-    input_shape=(images_new.shape[1:]),
-    ))
+model.add(Conv2D(32, kernel_size=(3,3) #orig 32 filters
+	#activation=act,
+	))
 model.add(LeakyReLU(alpha=leak))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.25))
@@ -91,27 +89,41 @@ model.add(LeakyReLU(alpha=leak))
 #coordinates
 model.add(Dense(8))
 
-def mean_squared_error(y_true, y_pred):    
-    return K.mean(K.square(y_pred - y_true), axis=-1)
+def mean_squared_error(y_true, y_pred):
+	return K.mean(K.square(y_pred - y_true), axis=-1)
 
 model.compile(loss='mean_squared_error',#'mean_squared_error' iou_loss.iou_loss
-              optimizer='Adadelta',#
-              metrics=[mean_squared_error])#not 'accuracy' iou_metric.iou_metric
+	optimizer='Adadelta',#
+	metrics=[mean_squared_error])#not 'accuracy' iou_metric.iou_metric
 
 #https://datascience.stackexchange.com/questions/18414/are-there-any-rules-for-choosing-the-size-of-a-mini-batch
 
-history = model.fit(images_new, labels,
-        batch_size=64,#orig 128
-        epochs=500,#50
-        verbose=1,
-        validation_split = 0.2)
-score = model.evaluate(images_new, labels, verbose=0)
-print('Test loss:', score[0])
 
-abc = model.predict(images_new[0:1,:,:,:])[0]
+#OLD: len(os.listdir("Data_Training_2/")[:int(len(os.listdir("Data_Training_2/") * 0.8))])
+history = model.fit_generator(
+	generate_data(batch_size),
+	steps_per_epoch = int(len(os.listdir("Data_Training_2/")) * 0.8 // batch_size),
+	#validation_data = generate_validation("Data_Training_2/", batch_size),
+	#validation_steps = int(len(os.listdir("Data_Training_2/")) * 0.2 // batch_size),
+	epochs=500,#50
+	verbose=1
+	)
+
+"""
+history = model.fit(images_new, labels,
+		batch_size=32,#orig 128
+		epochs=500,#50
+		verbose=1,
+		validation_split = 0.2)
+"""
+#score = model.evaluate(images_new, labels, verbose=0)
+#print('Test loss:', score[0])
+
+fuckfuckfuck = cv2.imread(os.listdir(dir)[0])
+abc = model.predict(fuckfuckfuck)[0]
 for i1 in range(4):
-        abc[2*i1] *= 1296*scale
-        abc[2*i1+1] *= 864*scale
+	abc[2*i1] *= 1296*scale
+	abc[2*i1+1] *= 864*scale
 print(abc)
 imgplot = plt.imshow(images_new[0,:,:,0])
 plt.plot([abc[0], abc[2]], [abc[1], abc[3]], color='#00ff00', linestyle='-', linewidth=3)
