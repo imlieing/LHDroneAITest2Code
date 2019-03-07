@@ -28,24 +28,12 @@ model = load_model('snapshots/inference_model_15.h5', backbone_name='resnet50')
 
 lst = os.listdir(dir)
 rsz = np.zeros((1,256,256,3))
-for i in range(len(lst)):
+s = ""
+for i in range(50):
     img = cv2.imread(dir + lst[i])
     rsz[0] = cv2.resize(img, (256, 256))
     abc = model.predict(rsz)[0]
     print(abc)
-    plt.imshow(rsz[0])
-    x1 = abc[0]
-    y1 = abc[1]
-    x2 = abc[2]
-    y2 = abc[3]
-    plt.plot([x1, x2], [y1,y1], color='#00ff00', linestyle='-', linewidth=3)
-    plt.plot([x2, x2], [y1,y2], color='#00ff00', linestyle='-', linewidth=3)
-    plt.plot([x2, x1], [y2,y2], color='#00ff00', linestyle='-', linewidth=3)
-    plt.plot([x1, x1], [y2,y1], color='#00ff00', linestyle='-', linewidth=3)
-    plt.show()
-
-
-################################################################################################
-###############################################################################################
-#################################################################################################
-################################################################################################
+    s += lst[i] + "," + abc[1] + "," + abc[2] + "," + abc[3] + "," + abc[4] + "\n"
+with open("results.txt", "w") as text_file:
+    text_file.write(s)
