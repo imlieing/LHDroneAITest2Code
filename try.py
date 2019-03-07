@@ -33,7 +33,7 @@ for i in range(50):
     img = cv2.imread(dir + lst[i])
     rsz[0] = cv2.resize(img, (256, 256))
     abc = model.predict(rsz)[0]
-    print(abc)
-    s += lst[i] + "," + abc[1] + "," + abc[2] + "," + abc[3] + "," + abc[4] + "\n"
+    print(abc.shape)
+    s += lst[i] + "," + abc[0,0,0] + "," + abc[0,0,1] + "," + abc[0,0,2] + "," + abc[0,0,3] + "\n"
 with open("results.txt", "w") as text_file:
     text_file.write(s)
