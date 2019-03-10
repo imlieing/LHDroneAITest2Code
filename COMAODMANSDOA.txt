@@ -1,3 +1,21 @@
-python keras_retinanet/bin/train.py csv "set.csv" "classes.csv" --workers=0
+============= Retina Net =============
+python keras_retinanet/bin/train.py csv "set.csv" "classes.csv"
 
-retinanet-train csv "set.csv" "classes.csv" --workers=0
+  Converting model to inference
+keras_retinanet/bin/convert_model.py /path/to/training/model.h5 /path/to/save/inference/model.h5
+
+  Continue Training from previous snapshot
+python keras_retinanet/bin/train.py --snapshot <snapshot> --epoch 5 csv "set.csv" "classes.csv"
+
+============= DOCKER STUFF ===============
+DONT RUN ANYTHING AS ROOT I ADDED U TO GROUP
+
+  when running docker for the gpu, always use nvidia-docker
+nvidia-docker run <image>
+
+  when done with a docker container, you need to commit.
+docker commit <container_name> <image>
+
+
+docker commit <container_name> working_tf
+nvidia-docker run -it working_tf bash
